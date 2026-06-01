@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
+import Dashboard from './Dashboard';
 
 function App() {
+  const [loggedIn, setLoggedIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    alert('Connexion en cours...');
+    if (email && password) {
+      setLoggedIn(true);
+    } else {
+      alert('Entrez votre email et mot de passe');
+    }
   };
+
+  if (loggedIn) return <Dashboard />;
 
   return (
     <div style={{
@@ -49,9 +57,7 @@ function App() {
             fontWeight: '500',
             color: '#555',
             marginBottom: '6px'
-          }}>
-            Adresse email
-          </label>
+          }}>Adresse email</label>
           <input
             type="email"
             placeholder="vous@cabinet.fr"
@@ -76,14 +82,13 @@ function App() {
             fontWeight: '500',
             color: '#555',
             marginBottom: '6px'
-          }}>
-            Mot de passe
-          </label>
+          }}>Mot de passe</label>
           <input
             type="password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
             style={{
               width: '100%',
               padding: '10px 12px',
