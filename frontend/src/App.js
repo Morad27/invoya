@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Dashboard from './Dashboard';
 import Factures from './Factures';
+import Clients from './Clients';
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -61,11 +62,7 @@ function App() {
         {/* Page active */}
         {page === 'dashboard' && <Dashboard />}
         {page === 'factures' && <Factures />}
-        {page === 'clients' && (
-          <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: '14px'}}>
-            Page Clients — bientôt disponible
-          </div>
-        )}
+        {page === 'clients' && <Clients />}
 
       </div>
     );
