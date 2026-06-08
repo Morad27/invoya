@@ -1,6 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 function Dashboard() {
+  const [metrics, setMetrics] = useState(null);
+  const [factures, setFactures] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Récupérer les métriques
+    fetch('http://127.0.0.1:8000/dashboard')
+      .then(res => res.json())
+      .then(data => setMetrics(data));
+
+    // Récupérer les factures
+    fetch('http://127.0.0.1:8000/factures')
+      .then(res => res.json())
+      .then(data => {
+        setFactures(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return (
+    <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: '14px'}}>
+      Chargement...
+    </div>
+  );
+
   return (
     <div style={{flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
 
@@ -41,10 +66,10 @@ function Dashboard() {
           marginBottom: '24px'
         }}>
           {[
-            { label: 'CA ce mois', value: '84 200 €', trend: '↑ +12%', color: '#3B6D11' },
-            { label: 'Factures émises', value: '47', trend: '↑ +5 cette semaine', color: '#3B6D11' },
-            { label: 'Impayés', value: '12 400 €', trend: '8 factures', color: '#854F0B' },
-            { label: 'Clients actifs', value: '23', trend: '3 cabinets', color: '#185FA5' },
+            { label: 'CA ce mois', value: metrics ? metrics.ca_mois + ' €' : '...', trend: '↑ +12%', color: '#3B6D11' },
+            { label: 'Factures émises', value: metrics ? metrics.factures_emises : '...', trend: '↑ +5 cette semaine', color: '#3B6D11' },
+            { label: 'Impayés', value: metrics ? metrics.impayes + ' €' : '...', trend: 'À relancer', color: '#854F0B' },
+            { label: 'Clients actifs', value: metrics ? metrics.clients_actifs : '...', trend: '3 cabinets', color: '#185FA5' },
           ].map((m, i) => (
             <div key={i} style={{
               background: 'white',
@@ -78,19 +103,21 @@ function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {[
-                { num: 'FA-2026-0047', client: 'Cabinet Dupont', date: '27/05/2026', montant: '3 200 €', statut: 'Payée', statutColor: '#3B6D11', statutBg: '#EAF3DE' },
-                { num: 'FA-2026-0046', client: 'SAS Technova', date: '25/05/2026', montant: '1 850 €', statut: 'En attente', statutColor: '#854F0B', statutBg: '#FAEEDA' },
-                { num: 'FA-2026-0045', client: 'SARL Bâtiplus', date: '22/05/2026', montant: '5 600 €', statut: 'Payée', statutColor: '#3B6D11', statutBg: '#EAF3DE' },
-                { num: 'FA-2026-0044', client: 'Auto-ent. Leroy', date: '20/05/2026', montant: '420 €', statut: 'En attente', statutColor: '#854F0B', statutBg: '#FAEEDA' },
-              ].map((f, i) => (
+              {factures.map((f, i) => (
                 <tr key={i} style={{borderTop: '1px solid #f0f0f0'}}>
-                  <td style={{padding: '12px 16px', color: '#185FA5'}}>{f.num}</td>
+                  <td style={{padding: '12px 16px', color: '#185FA5'}}>{f.numero}</td>
                   <td style={{padding: '12px 16px'}}>{f.client}</td>
                   <td style={{padding: '12px 16px', color: '#888'}}>{f.date}</td>
-                  <td style={{padding: '12px 16px', fontWeight: '500'}}>{f.montant}</td>
+                  <td style={{padding: '12px 16px', fontWeight: '500'}}>{f.montant} €</td>
                   <td style={{padding: '12px 16px'}}>
-                    <span style={{background: f.statutBg, color: f.statutColor, padding: '3px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: '500'}}>{f.statut}</span>
+                    <span style={{
+                      background: f.statut === 'Payée' ? '#EAF3DE' : '#FAEEDA',
+                      color: f.statut === 'Payée' ? '#3B6D11' : '#854F0B',
+                      padding: '3px 8px',
+                      borderRadius: '99px',
+                      fontSize: '11px',
+                      fontWeight: '500'
+                    }}>{f.statut}</span>
                   </td>
                   <td style={{padding: '12px 16px'}}>
                     <span style={{background: '#E6F1FB', color: '#185FA5', padding: '3px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: '500'}}>Conforme</span>
