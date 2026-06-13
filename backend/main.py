@@ -9,7 +9,8 @@ from typing import Optional
 from auth import hash_password, verify_password, create_access_token, verify_token
 
 # Configuration base de données
-DATABASE_URL = "postgresql://postgres:invoya2026@localhost:5432/invoya"
+import os
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:invoya2026@localhost:5432/invoya")"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
