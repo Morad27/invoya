@@ -7,10 +7,10 @@ from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
 from typing import Optional
 from auth import hash_password, verify_password, create_access_token, verify_token
-
-# Configuration base de données
 import os
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:invoya2026@localhost:5432/invoya")"
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:invoya2026@localhost:5432/invoya")
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -26,8 +26,6 @@ app.add_middleware(
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
-# --- MODÈLES BASE DE DONNÉES ---
 
 class UserDB(Base):
     __tablename__ = "users"
@@ -58,8 +56,6 @@ class FactureDB(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# --- MODÈLES PYDANTIC ---
-
 class UserRegister(BaseModel):
     nom: str
     email: str
@@ -81,15 +77,11 @@ class Facture(BaseModel):
     montant: float
     statut: str
 
-# --- HELPER ---
-
 def get_current_user(token: str = Depends(oauth2_scheme)):
     email = verify_token(token)
     if email is None:
         raise HTTPException(status_code=401, detail="Token invalide")
     return email
-
-# --- ROUTES AUTH ---
 
 @app.get("/")
 def root():
@@ -122,8 +114,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
     token = create_access_token({"sub": user.email, "nom": user.nom})
     return {"access_token": token, "token_type": "bearer", "nom": user.nom}
-
-# --- ROUTES PROTÉGÉES ---
 
 @app.get("/clients")
 def get_clients(current_user: str = Depends(get_current_user)):
