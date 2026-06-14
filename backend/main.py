@@ -1,13 +1,16 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import StreamingResponse
 from sqlalchemy import create_engine, Column, Integer, String, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
 from typing import Optional
 from auth import hash_password, verify_password, create_access_token, verify_token
+from facturx_generator import generate_factur_x
 import os
+import io
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:invoya2026@localhost:5432/invoya")
 
@@ -149,6 +152,43 @@ def add_facture(facture: Facture, current_user: str = Depends(get_current_user))
     db.close()
     return db_facture
 
+@app.get("/factures/{facture_id}/factur-x")
+def download_factur_x(facture_id: int, current_user: str = Depends(get_current_user)):
+    try:
+        db = SessionLocal()
+        facture = db.query(FactureDB).filter(FactureDB.id == facture_id).first()
+        db.close()
+        
+        if not facture:
+            raise HTTPException(status_code=404, detail="Facture non trouvée")
+        
+        facture_data = {
+            "numero": facture.numero,
+            "date_emission": facture.date,
+            "client_nom": facture.client,
+            "client_siret": "552144848000210",
+            "montant_ht": float(facture.montant),
+            "tva": float(facture.montant * 0.20),
+            "montant_ttc": float(facture.montant * 1.20),
+        }
+        
+        xml_bytes = generate_factur_x(facture_data)
+        
+        if not xml_bytes:
+            raise HTTPException(status_code=500, detail="Erreur génération XML")
+        
+        return StreamingResponse(
+            iter([xml_bytes]),
+            media_type="application/xml",
+            headers={"Content-Disposition": f"attachment; filename={facture.numero}.xml"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERREUR : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
+
 @app.get("/dashboard")
 def get_dashboard(current_user: str = Depends(get_current_user)):
     db = SessionLocal()
@@ -163,54 +203,7 @@ def get_dashboard(current_user: str = Depends(get_current_user)):
         "impayes": total_impaye,
         "clients_actifs": len(clients)
     }
-from facturx_generator import generate_factur_x
-from fastapi.responses import FileResponse
 
-@app.get("/factures/{facture_id}/factur-x")
-def download_factur_x(facture_id: int, current_user: str = Depends(get_current_user)):
-    db = SessionLocal()
-    facture = db.query(FactureDB).filter(FactureDB.id == facture_id).first()
-    db.close()
-    
-    if not facture:
-        raise HTTPException(status_code=404, detail="Facture non trouvée")
-    
-    # Préparer les données pour Factur-X
-    facture_data = {
-        "numero": facture.numero,
-        "date_emission": facture.date,
-        "date_echeance": "2026-06-27",
-        "client_nom": facture.client,
-        "client_siret": "552144848000210",
-        "client_email": "contact@cabinet.fr",
-        "client_adresse": "123 rue de Paris",
-        "client_ville": "Paris 75008",
-        "montant_ht": facture.montant,
-        "tva": facture.montant * 0.20,
-        "montant_ttc": facture.montant * 1.20,
-        "lignes": [
-            {
-                "description": f"Facture {facture.numero}",
-                "quantite": 1,
-                "prix_unitaire": facture.montant,
-                "montant": facture.montant
-            }
-        ]
-    }
-    
-    # Générer le Factur-X
-    xml_bytes = generate_factur_x(facture_data)
-    
-    if not xml_bytes:
-        raise HTTPException(status_code=500, detail="Erreur génération Factur-X")
-    
-    # Retourner le fichier XML
-    import io
-    return FileResponse(
-        io.BytesIO(xml_bytes),
-        media_type="application/xml",
-        filename=f"{facture.numero}_factur-x.xml"
-    )
 @app.post("/init-data")
 def init_data():
     db = SessionLocal()
