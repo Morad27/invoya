@@ -1,7 +1,0 @@
-{
-  "buildCommand": "npm run build",
-  "startCommand": "npx serve -s build -l 8080",
-  "environmentVariables": {
-    "NODE_ENV": "production"
-  }
-}
