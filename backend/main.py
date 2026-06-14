@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import Optional
 from auth import hash_password, verify_password, create_access_token, verify_token
 from facturx_generator import generate_factur_x
+from pdf_generator import generate_facture_pdf
 import os
 import io
 
@@ -154,6 +155,46 @@ def add_facture(facture: Facture, current_user: str = Depends(get_current_user))
 
 @app.get("/factures/{facture_id}/factur-x")
 def download_factur_x(facture_id: int, current_user: str = Depends(get_current_user)):
+    @app.get("/factures/{facture_id}/pdf")
+def download_facture_pdf(facture_id: int, current_user: str = Depends(get_current_user)):
+    try:
+        db = SessionLocal()
+        facture = db.query(FactureDB).filter(FactureDB.id == facture_id).first()
+        db.close()
+        
+        if not facture:
+            raise HTTPException(status_code=404, detail="Facture non trouvée")
+        
+        facture_data = {
+            "numero": facture.numero,
+            "date_emission": facture.date,
+            "date_echeance": "2026-06-27",
+            "client_nom": facture.client,
+            "client_siret": "552144848000210",
+            "client_email": "contact@cabinet.fr",
+            "client_adresse": "123 rue de Paris",
+            "client_ville": "Paris 75008",
+            "montant_ht": float(facture.montant),
+            "tva": float(facture.montant * 0.20),
+            "montant_ttc": float(facture.montant * 1.20),
+        }
+        
+        pdf_bytes = generate_facture_pdf(facture_data)
+        
+        if not pdf_bytes:
+            raise HTTPException(status_code=500, detail="Erreur génération PDF")
+        
+        return StreamingResponse(
+            iter([pdf_bytes]),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={facture.numero}.pdf"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERREUR : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
     try:
         db = SessionLocal()
         facture = db.query(FactureDB).filter(FactureDB.id == facture_id).first()
