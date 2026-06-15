@@ -255,10 +255,11 @@ def init_data():
         db.close()
         return {"message": "Données déjà initialisées"}
     clients = [
-        ClientDB(nom="Cabinet Dupont & Associés", siret="552 144 848 00021", email="contact@dupont.fr", tel="+33 1 42 36 58 90", ville="Paris 75008", type="Cabinet"),
-        ClientDB(nom="SAS Technova", siret="481 234 567 00018", email="compta@technova.fr", tel="+33 1 55 23 14 78", ville="Paris 75008", type="PME"),
-        ClientDB(nom="SARL Bâtiplus", siret="392 876 543 00032", email="direction@batiplus.fr", tel="+33 4 72 18 36 90", ville="Lyon 69002", type="PME"),
-    ]
+    ClientDB(nom="Cabinet Dupont & Associés", siret="552 144 848 00021", email="contact@dupont.fr", tel="+33 1 42 36 58 90", ville="Paris 75008", type="Cabinet"),
+    ClientDB(nom="SAS Technova", siret="481 234 567 00018", email="compta@technova.fr", tel="+33 1 55 23 14 78", ville="Paris 75008", type="PME"),
+    ClientDB(nom="SARL Bâtiplus", siret="392 876 543 00032", email="direction@batiplus.fr", tel="+33 4 72 18 36 90", ville="Lyon 69002", type="PME"),
+    ClientDB(nom="Auto-entreprise Leroy", siret="821 654 321 00015", email="leroy@auto-ent.fr", tel="+33 6 12 34 56 78", ville="Marseille 13008", type="TPE"),
+]
     factures = [
         FactureDB(numero="FA-2026-0047", client="Cabinet Dupont", date="27/05/2026", montant=3200, statut="Payée"),
         FactureDB(numero="FA-2026-0046", client="SAS Technova", date="25/05/2026", montant=1850, statut="En attente"),
