@@ -155,7 +155,42 @@ def add_facture(facture: Facture, current_user: str = Depends(get_current_user))
 
 @app.get("/factures/{facture_id}/factur-x")
 def download_factur_x(facture_id: int, current_user: str = Depends(get_current_user)):
-    @app.get("/factures/{facture_id}/pdf")
+    try:
+        db = SessionLocal()
+        facture = db.query(FactureDB).filter(FactureDB.id == facture_id).first()
+        db.close()
+        
+        if not facture:
+            raise HTTPException(status_code=404, detail="Facture non trouvée")
+        
+        facture_data = {
+            "numero": facture.numero,
+            "date_emission": facture.date,
+            "client_nom": facture.client,
+            "client_siret": "552144848000210",
+            "montant_ht": float(facture.montant),
+            "tva": float(facture.montant * 0.20),
+            "montant_ttc": float(facture.montant * 1.20),
+        }
+        
+        xml_bytes = generate_factur_x(facture_data)
+        
+        if not xml_bytes:
+            raise HTTPException(status_code=500, detail="Erreur génération XML")
+        
+        return StreamingResponse(
+            iter([xml_bytes]),
+            media_type="application/xml",
+            headers={"Content-Disposition": f"attachment; filename={facture.numero}.xml"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERREUR : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
+
+@app.get("/factures/{facture_id}/pdf")
 def download_facture_pdf(facture_id: int, current_user: str = Depends(get_current_user)):
     try:
         db = SessionLocal()
@@ -195,40 +230,6 @@ def download_facture_pdf(facture_id: int, current_user: str = Depends(get_curren
     except Exception as e:
         print(f"ERREUR : {e}")
         raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
-    try:
-        db = SessionLocal()
-        facture = db.query(FactureDB).filter(FactureDB.id == facture_id).first()
-        db.close()
-        
-        if not facture:
-            raise HTTPException(status_code=404, detail="Facture non trouvée")
-        
-        facture_data = {
-            "numero": facture.numero,
-            "date_emission": facture.date,
-            "client_nom": facture.client,
-            "client_siret": "552144848000210",
-            "montant_ht": float(facture.montant),
-            "tva": float(facture.montant * 0.20),
-            "montant_ttc": float(facture.montant * 1.20),
-        }
-        
-        xml_bytes = generate_factur_x(facture_data)
-        
-        if not xml_bytes:
-            raise HTTPException(status_code=500, detail="Erreur génération XML")
-        
-        return StreamingResponse(
-            iter([xml_bytes]),
-            media_type="application/xml",
-            headers={"Content-Disposition": f"attachment; filename={facture.numero}.xml"}
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"ERREUR : {e}")
-        raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
 
 @app.get("/dashboard")
 def get_dashboard(current_user: str = Depends(get_current_user)):
@@ -236,12 +237,14 @@ def get_dashboard(current_user: str = Depends(get_current_user)):
     factures = db.query(FactureDB).all()
     clients = db.query(ClientDB).all()
     db.close()
-    total_ca = sum(f.montant for f in factures if f.statut == "Payée")
+    total_ca = sum(f.montant for f in factures)  # TOUTES les factures
+    total_encaisse = sum(f.montant for f in factures if f.statut == "Payée")
     total_impaye = sum(f.montant for f in factures if f.statut == "En attente")
     return {
-        "ca_mois": total_ca,
-        "factures_emises": len(factures),
+        "ca": total_ca,
+        "encaisses": total_encaisse,
         "impayes": total_impaye,
+        "factures_emises": len(factures),
         "clients_actifs": len(clients)
     }
 
